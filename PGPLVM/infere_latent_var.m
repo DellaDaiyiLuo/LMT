@@ -1,4 +1,5 @@
-function result = pgplvm_la(yy,nf,setopt,xx)
+function result = infere_latent_var(yy,nf,setopt,xx,fftc,xgrid)
+% Della
 % Initialize the log of spike rates with the square root of spike counts.
 ffmat = sqrt(yy);
 
@@ -16,40 +17,14 @@ xplds = setopt.xplds;
 
 % generate grid values as inducing points
 tgrid = setopt.tgrid;
-% tgrid = [1:nt]';
-% switch nf
-%     case 1
-%         xgrid = gen_grid([min(xx(:,1)) max(xx(:,1))],25,nf); % x grid (for plotting purposes)
-%     case 2
-%         xgrid = gen_grid([min(xx(:,1)) max(xx(:,1)); min(xx(:,2)) max(xx(:,2))],10,nf); % x grid (for plotting purposes)
-% end
-switch nf
-    case 1
-        ng = 500;
-    case 2
-        ng = 25;
-    case 3
-        ng = 10;
-    case 4
-        ng = 5;
-    case 5
-        ng = 5;
-    case 6
-        ng = 4;
-    case 7
-        ng = 3;
-    case 8
-        ng = 2;
-end
 
 % set hypers
 hypers = [setopt.rhoxx, setopt.lenxx, setopt.rhoff, setopt.lenff]; % rho for Kxx; len for Kxx; rho for Kff; len for Kff
 
 % set initial noise variance for simulated annealing
-lr = setopt.lr; % learning rate
-sigma2_init = setopt.sigma2_init;
+% lr = setopt.lr; % learning rate
+sigma2 = setopt.sigma2_init;
 propnoise_init = 0.001;
-sigma2 = sigma2_init;
 propnoise = propnoise_init;
 
 % set initial prior kernel
@@ -66,8 +41,6 @@ initTYPE = setopt.initTYPE;
 switch initTYPE
     case 1  % use LLE or PPCA or PLDS init
         uu0 = Bfun(xplds,1);
-        % uu0 = Bfun(xlle,1);
-        % uu0 = Bfun(xppca,1);
     case 2   % use random init
         uu0 = randn(nu,nf)*0.01;
     case 3   % true xx
@@ -76,15 +49,15 @@ end
 uu = uu0;  % initialize sample
 xxsamp = Bfun(uu,0);
 if nf==1
-    xxsampmat = align_xtrue(xxsamp,xpldsmat);
+    xxsampmat = align_xtrue(xxsamp,xx);
     xxsampmat_old = xxsampmat;
+    xpldsmat = xxsampmat;
 end
 
 % Now do inference
 infTYPE = 1; % 1 for MAP; 2 for MH sampling; 3 for hmc
 ppTYPE = 1; % 1 optimization for ff; 2. sampling for ff
 la_flag = setopt.la_flag; % 1. no la; 2. standard la; 3. decoupled la
-opthyp_flag = setopt.opthyp_flag; % flag for optimizing the hyperparameters
 
 % set options for minfunc
 options = [];
@@ -94,19 +67,26 @@ options.MaxIter = 1e1;
 options.maxFunEvals = 1e1;
 options.Display = 'off';
 
-rs = []; % collect r-squared value for our method
 niter = setopt.niter;
-clf
+figure(1)
+
+switch nf
+    case 1
+        xxsampmat = align_xtrue(xxsamp,xx);
+        subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
+        xlabel('time bin'); drawnow;
+        xxsampmat_old = xxsampmat;
+    case 2
+        scatter(xxsamp(:,1),xxsamp(:,2),3,xx); 
+        drawnow;
+end
+
 for iter = 1:niter
+    display(['iter' num2str(iter)])
     
-    if sigma2>1e-8
-        sigma2 = sigma2*lr;  % decrease the noise variance with a learning rate
-    end
-    gridbound = [];
-    for i=1:nf
-        gridbound = [gridbound; min(xxsamp(:,i)) max(xxsamp(:,i))];
-    end
-    xgrid = gen_grid(gridbound,ng,nf);
+%     if sigma2>1e-8
+%         sigma2 = sigma2*lr;  % decrease the noise variance with a learning rate
+%     end
 
     %% 1. Find optimal ff
     covfun = covariance_fun(rhoff,lenff,ffTYPE); % get the covariance function
@@ -114,7 +94,8 @@ for iter = 1:niter
     cuuinv = pdinv(cuu);
     cufx = covfun(xgrid,xxsamp);
     
-    lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains(ff,yy,cufx,cuu,sigma2);
+    lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2,fftc,setopt.sigma_change);
+%     lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2_init,fftc); % DL, cov=sigma2
     switch ppTYPE
         case 1
             ff0 = vec(ffmat);
@@ -207,55 +188,26 @@ for iter = 1:niter
     switch nf
         case 1
             xxsampmat = align_xtrue(xxsamp,xx);
-            subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','PLDS x','P-GPLVM x','P-GPLVM old x');
+            subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
             xlabel('time bin'); drawnow;
             xxsampmat_old = xxsampmat;
         case 2
             scatter(xxsamp(:,1),xxsamp(:,2),3,xx); drawnow;
     end
     
-    
-    %% optimze hyperparameters
-    if opthyp_flag
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Compute initial negative log-likelihoods
-        hypid = setopt.hypid; % 1. rho for Kxx; 2. len for Kxx; 3. rho for Kff; 4. len for Kff; 5. sigma2 (simulated annealing instead of optimization)
-        loghyp0 = log([hypers sigma2]);
-        loghyp = log([rhoxx;lenxx;rhoff;lenff;sigma2]);
-        loghyp = loghyp(hypid);
-        lmlifun_hyp = @(loghyp) logmargli_gplvm_se_sor_hyp(loghyp,loghyp0,xxsamp,xgrid,latentTYPE,tgrid,nt,hypid,sigma2,ffmat,ffTYPE,sigma2);
-        opts = optimset('largescale', 'off', 'maxiter', 1e1, 'display', 'off');
-        lb = [0;2.3;0;-3;-5]; % lower bound
-        lb = lb(hypid);
-        ub = [5;5;5;5;5]; % upper bound
-        ub = ub(hypid);
-        loghypnew = fmincon(lmlifun_hyp,vec(loghyp),[],[],[],[],lb,ub,[],opts);
-        % loghypnew = fminunc(lmlifun_hyp,vec(loghyp),opts);
-        loghyp0new = loghyp0;
-        loghyp0new(hypid) = loghypnew;
-        rhoxx = exp(loghyp0new(1));
-        lenxx = exp(loghyp0new(2));
-        rhoff = exp(loghyp0new(3));
-        lenff = exp(loghyp0new(4));
-        sigma2 = exp(loghyp0new(5));
+    if setopt.sigma_change==1
+        cuu = covfun(xgrid,xgrid)+sigma2*eye(size(xgrid,1));
+        cuuinv = pdinv(cuu);
+        cufx = covfun(xgrid,xxsamp);
+        sigma2_new = abs(mean(diag(cov(ffmat')-cufx'*cuuinv*cufx),'all'));
+        
+        sigma2 = sigma2_new;
         display(['iter:' num2str(iter) ', rhoxx:' num2str(rhoxx) ', lenxx:' num2str(lenxx) ', rhoff:' num2str(rhoff) ', lenff:' num2str(lenff) ', sigma2:' num2str(sigma2)])
+        if iter==2
+            setopt.sigma_change=2;
+        end
     end
 
-    %% collect r-squared values
-%     display(['iter:' num2str(iter) ', PLDS r2:' num2str(rsquare(xx,xpldsmat)) ', P-GPLVM r2:' num2str(rsquare(xx,xxsampmat))])
-%     rs = [rs; rsquare(xx,xxsampmat)];
-%     subplot(411)
-%     plot(rs,'r-*'); hold on
-%     plot(rsquare(xx,xpldsmat)*ones(length(rs),1),'b-')
-%     legend('P-GPLVM','PLDS');
-%     hold off, title(['Performance recovering true latent']); 
-%     ylabel('R^2');
-%     xlabel('iteration #');
-%     drawnow;
-%     figure(1)
-%     scatter(xxsamp(:,1),xxsamp(:,2),3,xx)
-%     drawnow;
-%     figure(3);clf
 end
 
 result.xxsamp = xxsamp;
@@ -265,7 +217,7 @@ result.rhoxx = rhoxx;
 result.lenxx = lenxx;
 result.rhoff = rhoff;
 result.lenff = lenff;
-result.sigma = sigma2;
+result.sigma2 = sigma2
 
 
 

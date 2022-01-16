@@ -79,6 +79,8 @@ for nn=1:nneur
 end
 
 L = 0.5*logdetB-ytrm+etrm+.5*qtrm+.5*trace(uu'*uu);
+% figure(3);hold on;plot(uu)
+
 
 %%
 dL_Kuf = dL_logdet-dL_ytrm+dL_etrm+dL_qtrm;

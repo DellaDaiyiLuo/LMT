@@ -1,5 +1,5 @@
 function [L,dL] = logmargli_gplvm_se_block_ref_nogrid(uu,xgrid,invkf,yymat,BBwfun,covfun,nf,BBwTfun,ntr)
-uux = reshape(uu,ntr,[],nf);
+uux = reshape(uu,ntr,[],nf); 
 xxsamp = BBwfun(uux,0);
 
 %%%%%%% cov %%%%%%%%

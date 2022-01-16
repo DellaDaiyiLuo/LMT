@@ -1,4 +1,4 @@
-function L = logmargli_gplvm_se_sor_hyp(loghypxx,loghypxx0,xxsamp,xgrid,latentTYPE,tgrid,nt,hypid,sigma2,ffmat,ffTYPE,cnse)
+function L = logmargli_gplvm_se_sor_hyp_tc(loghypxx,loghypxx0,xxsamp,xgrid,latentTYPE,tgrid,nt,hypid,sigma2,ffmat,ffTYPE,cnse)
 loghypxx0(hypid) = loghypxx;
 BBwfun_x = prior_kernel(exp(loghypxx0(1)),exp(loghypxx0(2)),nt,latentTYPE,tgrid);
 % imagesc(Kprior),colorbar
@@ -14,10 +14,15 @@ invcc = pdinv(cufx*cufx'+sigma2*cuu);
 
 % Log-determinant term
 logDetS1 = logdetns(cufx*cufx'+sigma2*cuu)-logdetns(cuu)+log(sigma2)*(length(xxsamp)-size(cufx,1));
+ %logDetS1 = log(sigma2)*length(xxsamp);
 logdettrm = .5*nneur*logDetS1;
 
 % Quadratic term
 cf = cufx*ffmat;
+% nt = numel(tgrid);
+% invcc = pdinv(spdiags(ones(nt,1)*[sigma2/10,sigma2,sigma2/10],-1:1,nt,nt));
+% invcc = pdinv(sigma2*eye(nt));
 Qtrm = .5*trace(ffmat'*ffmat)/sigma2 -.5*trace(invcc*cf*cf')/sigma2;
+
 
 L = Qtrm+logdettrm+.5*trace(uu'*uu);
