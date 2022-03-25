@@ -1,6 +1,13 @@
 function [BBwfun, BBwTfun, nu, sdiag, iikeep, Kprior] = prior_kernel(rhoxx,lenxx,nt,latentTYPE,tgrid)
+% DL: using Cholesky decomposition to compute K^{1/2} and K^{1/2}.T, getting uu~N(0,1)
+% xx=K^{1/2}*uu, K^{-1/2}*xx=uu
+
 if nargin<5
     tgrid = [1:nt]';
+%     x = tgrid;
+%     xd = diff(x);
+% else
+%     xd = tgrid;
 end
 kSE = @(rho,len,x,z) covSEiso_deriv([log(len); log(rho)/2], x, z);
 kAR1 = @(rho,len,x,z) covAR1iso([log(len); log(rho)/2], x, z);
@@ -28,7 +35,8 @@ switch latentTYPE
             Kprior = BBw*BBw';
         end
     case 2, % SE
-        Kprior = kSE(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
+%         Kprior = kAR1(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
+%         Kprior = kSE(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
         [BBw, nu, sdiag, iikeep] = BfromK(Kprior,1e-4);
         BBwfun = @(xx,invflag) BBwfun_SE(xx,BBw,invflag);
         BBwTfun = @(xx,invflag) BBwTfun_SE(xx,BBw,invflag);
@@ -45,11 +53,11 @@ end
 function BBwxx = BBwfun_AR(xx,ddB,ssB,invflag)
 
 if invflag
-    BBwxx = bidiagonal_low_multiply_matrix(ddB,ssB,xx);
+    BBwxx = bidiagonal_low_multiply_matrix(ddB,ssB,xx); % xx to uu
 else
-    nt = length(xx);
+    nt = length(xx);  % uu to xx
     B = spdiags([ssB, ddB], -1:0, nt,nt);
-    BBwxx = B\xx;
+    BBwxx = B\xx; % here B=K^{-1/2}, B\uu=K^{1/2}*uu=xx
 end
 
 function BBwTxx = BBwTfun_SE(xx,BBw,invflag)
