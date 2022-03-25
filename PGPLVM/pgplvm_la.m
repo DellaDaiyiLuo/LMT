@@ -1,6 +1,6 @@
 function result = pgplvm_la(yy,nf,setopt,xx)
 % Initialize the log of spike rates with the square root of spike counts.
-ffmat = sqrt(yy);
+ffmat = setopt.ffmat; %sqrt(yy);
 
 % Get sizes and spike counts
 [nt,nneur] = size(yy); % nt: number of time points; nneur: number of neurons

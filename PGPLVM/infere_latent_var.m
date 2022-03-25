@@ -1,7 +1,7 @@
 function result = infere_latent_var(yy,nf,setopt,xx,fftc,xgrid)
 % Della
 % Initialize the log of spike rates with the square root of spike counts.
-ffmat = sqrt(yy);
+ffmat = setopt.ffmat;%sqrt(yy);
 
 % Get sizes and spike counts
 [nt,nneur] = size(yy); % nt: number of time points; nneur: number of neurons
@@ -31,6 +31,7 @@ propnoise = propnoise_init;
 % K = Bfun(eye(nt),0)*Bfun(eye(nt),0)';
 % Bfun maps the white noise space to xx space
 [Bfun, BTfun, nu, sdiag, iikeep, Kprior] = prior_kernel(hypers(1),hypers(2),nt,latentTYPE,tgrid);
+% [Bfun, BTfun, nu, sdiag, iikeep, Kprior] = prior_kernel_tc(hypers(1),hypers(2),nt,latentTYPE,tgrid,setopt.xmean);
 rhoxx = hypers(1); % marginal variance of the covariance function the latent xx
 lenxx = hypers(2); % length scale of the covariance function for the latent xx
 rhoff = hypers(3); % marginal variance of the covariance function for the tuning curve ff
@@ -68,7 +69,7 @@ options.maxFunEvals = 1e1;
 options.Display = 'off';
 
 niter = setopt.niter;
-figure(1)
+% figure(1)
 
 switch nf
     case 1
@@ -77,12 +78,16 @@ switch nf
         xlabel('time bin'); drawnow;
         xxsampmat_old = xxsampmat;
     case 2
-        scatter(xxsamp(:,1),xxsamp(:,2),3,xx); 
+%         clf;
+        scatter(xxsamp(:,1),xxsamp(:,2),3); 
         drawnow;
 end
 
 for iter = 1:niter
-    display(['iter' num2str(iter)])
+    display(['iter' num2str(iter) ' xplds center:' ])
+%     display(setopt.xmean) 
+    display('xxsamp center: ')
+    display(mean(xxsamp,1))
     
 %     if sigma2>1e-8
 %         sigma2 = sigma2*lr;  % decrease the noise variance with a learning rate
@@ -95,7 +100,7 @@ for iter = 1:niter
     cufx = covfun(xgrid,xxsamp);
     
     lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2,fftc,setopt.sigma_change);
-%     lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2_init,fftc); % DL, cov=sigma2
+    
     switch ppTYPE
         case 1
             ff0 = vec(ffmat);
@@ -119,6 +124,7 @@ for iter = 1:niter
     
     %% 2. Find optimal latent xx, actually search in u space, xx=K^{1/2}*u
     [Bfun, BTfun, nu] = prior_kernel(rhoxx,lenxx,nt,latentTYPE,tgrid); % DL: using Cholesky decomposition to compute K^{1/2} and K^{1/2}.T, getting uu~N(0,1)
+%     [Bfun, BTfun, nu] = prior_kernel_tc(rhoxx,lenxx,nt,latentTYPE,tgrid,setopt.xmean); %mean(xxsamp,1)); % DL: using Cholesky decomposition to compute K^{1/2} and K^{1/2}.T, getting uu~N(0,1)
     uu = Bfun(xxsamp,1);
     cufx_old = covfun(xgrid,xxsamp);
     invcc_old = pdinv(cufx_old*cufx_old'+sigma2*cuu);
@@ -137,7 +143,8 @@ for iter = 1:niter
                     lmlifun = @(u) logmargli_gplvm_se_sor_la(u,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu);
                 case 3
                     % decouple la
-                    lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old);
+%                     lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old);
+                    lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple_tc(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old,fftc);
             end
     end
     
@@ -183,7 +190,7 @@ for iter = 1:niter
     xxsamp = Bfun(uu,0);
     
     % plot latent xx
-    figure(1)
+%     figure(1)
     
     switch nf
         case 1
@@ -192,7 +199,8 @@ for iter = 1:niter
             xlabel('time bin'); drawnow;
             xxsampmat_old = xxsampmat;
         case 2
-            scatter(xxsamp(:,1),xxsamp(:,2),3,xx); drawnow;
+%             scatter(xxsamp(:,1),xxsamp(:,2),3,xx); drawnow;
+            scatter(xxsamp(:,1),xxsamp(:,2),3,'MarkerEdgeColor',[1/niter*iter,0,0]); drawnow;
     end
     
     if setopt.sigma_change==1

@@ -4,7 +4,7 @@ uu = reshape(uu,[],nf);
 xx = BBwfun(uu,0);
 
 %%%%%%% cov %%%%%%%%
-[cufx,dcufx] = covfun(xgrid,xx);
+[cufx,dcufx] = covfun(xgrid,xx); % dcufx = d(cufx)/dx
 % cuuinv = pdinv(cuu);
 eff = exp(ff).*ff;
 
@@ -83,10 +83,10 @@ L = 0.5*logdetB-ytrm+etrm+.5*qtrm+.5*trace(uu'*uu);
 
 
 %%
-dL_Kuf = dL_logdet-dL_ytrm+dL_etrm+dL_qtrm;
+dL_Kuf = dL_logdet-dL_ytrm+dL_etrm+dL_qtrm; % size: (N_g, N)
 
-dL_K1 = repmat(dL_Kuf,nf,1);
-dKuf1 = reshape(dcufx,[],nt);
+dL_K1 = repmat(dL_Kuf,nf,1); % size: (N_g*nf,N) [dL_Kuf;dL_Kuf]
+dKuf1 = reshape(dcufx,[],nt); % size: (N_g*nf,N) [dcufx(:,1:2:end);dcufx(:,2:2:end)]
 
 dcf = dL_K1.*dKuf1;
 dcf1 = sum(reshape(dcf,size(xgrid,1),[]),1);
