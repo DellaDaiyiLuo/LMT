@@ -70,28 +70,24 @@ options.Display = 'off';
 
 niter = setopt.niter;
 % figure(1)
-
-switch nf
-    case 1
-        xxsampmat = align_xtrue(xxsamp,xx);
-        subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
-        xlabel('time bin'); drawnow;
-        xxsampmat_old = xxsampmat;
-    case 2
-%         clf;
-        scatter(xxsamp(:,1),xxsamp(:,2),3); 
-        drawnow;
+if setopt.draw
+    figure;hold on
+    switch nf
+        case 1
+            xxsampmat = align_xtrue(xxsamp,xx);
+            subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
+            xlabel('time bin'); drawnow;
+            xxsampmat_old = xxsampmat;
+        case 2
+    %         clf;
+            scatter(xxsamp(:,1),xxsamp(:,2),3); 
+            drawnow;
+    end
 end
 
 for iter = 1:niter
-    display(['iter' num2str(iter) ' xplds center:' ])
-%     display(setopt.xmean) 
-    display('xxsamp center: ')
-    display(mean(xxsamp,1))
+    display(['iter' num2str(iter)])
     
-%     if sigma2>1e-8
-%         sigma2 = sigma2*lr;  % decrease the noise variance with a learning rate
-%     end
 
     %% 1. Find optimal ff
     covfun = covariance_fun(rhoff,lenff,ffTYPE); % get the covariance function
@@ -99,7 +95,7 @@ for iter = 1:niter
     cuuinv = pdinv(cuu);
     cufx = covfun(xgrid,xxsamp);
     
-    lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2,fftc,setopt.sigma_change);
+    lmlifun_poiss = @(ff) StateSpaceModelsofSpikeTrains_tc(ff,yy,cufx,cuu,cuuinv,sigma2,fftc);
     
     switch ppTYPE
         case 1
@@ -191,41 +187,28 @@ for iter = 1:niter
     
     % plot latent xx
 %     figure(1)
-    
-    switch nf
-        case 1
-            xxsampmat = align_xtrue(xxsamp,xx);
-            subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
-            xlabel('time bin'); drawnow;
-            xxsampmat_old = xxsampmat;
-        case 2
-%             scatter(xxsamp(:,1),xxsamp(:,2),3,xx); drawnow;
-            scatter(xxsamp(:,1),xxsamp(:,2),3,'MarkerEdgeColor',[1/niter*iter,0,0]); drawnow;
-    end
-    
-    if setopt.sigma_change==1
-        cuu = covfun(xgrid,xgrid)+sigma2*eye(size(xgrid,1));
-        cuuinv = pdinv(cuu);
-        cufx = covfun(xgrid,xxsamp);
-        sigma2_new = abs(mean(diag(cov(ffmat')-cufx'*cuuinv*cufx),'all'));
-        
-        sigma2 = sigma2_new;
-        display(['iter:' num2str(iter) ', rhoxx:' num2str(rhoxx) ', lenxx:' num2str(lenxx) ', rhoff:' num2str(rhoff) ', lenff:' num2str(lenff) ', sigma2:' num2str(sigma2)])
-        if iter==2
-            setopt.sigma_change=2;
+    if setopt.draw
+        switch nf
+            case 1
+                xxsampmat = align_xtrue(xxsamp,xx);
+                subplot(212); plot(1:nt,xx,'b-',1:nt,xpldsmat,'m.-',1:nt,xxsampmat,'k-',1:nt,xxsampmat_old,'k:','linewidth',2); legend('true x','init x','P-GPLVM x','P-GPLVM old x');
+                xlabel('time bin'); drawnow;
+                xxsampmat_old = xxsampmat;
+            case 2
+                scatter(xxsamp(:,1),xxsamp(:,2),3,'MarkerEdgeColor',[1/niter*iter,0,0]); drawnow;
         end
     end
+    
 
 end
 
 result.xxsamp = xxsamp;
-% result.xxsampmat = xxsampmat;
 result.ffmat = ffmat;
 result.rhoxx = rhoxx;
 result.lenxx = lenxx;
 result.rhoff = rhoff;
 result.lenff = lenff;
-result.sigma2 = sigma2
+result.sigma2 = sigma2;
 
 
 

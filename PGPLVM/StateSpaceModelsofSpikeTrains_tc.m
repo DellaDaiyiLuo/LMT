@@ -1,4 +1,4 @@
-function [L,dL,ffmat] =  StateSpaceModelsofSpikeTrains_tc(ff,yymat,cufx,cuu,cuuinv,sigma2,fftc,sigma_change)
+function [L,dL,ffmat] =  StateSpaceModelsofSpikeTrains_tc(ff,yymat,cufx,cuu,cuuinv,sigma2,fftc)
 [nt,nneur] = size(yymat);
 ffmat = reshape(ff,[],nneur);
 ff = vec(ffmat);
@@ -13,15 +13,9 @@ log_yy_ff = yy'*ff-sum(exp(ff1))*exp(maxff);
 % cuu = pdinv(cuuinv);
 ff_q = ffmat - cufx'*cuuinv*fftc;
 cf = cufx*ff_q;
-if sigma_change
-    log_ff = -.5*trace(ff_q'*ff_q)/sigma2; % posterior f cov
-    dL2 = -vec(ff_q/sigma2);
-else
-    invcc = pdinv(cufx*cufx'+sigma2*cuu);
-    log_ff = -.5*trace(ff_q'*ff_q)/sigma2+.5*trace(invcc*cf*cf')/sigma2; % -0.5*f'*f/K_x
-    dL2 = -vec(ff_q/sigma2-cufx'*invcc*(cufx*ff_q)/sigma2); % -f/K_x
-end
-% original f cov
+
+log_ff = -.5*trace(ff_q'*ff_q)/sigma2; % posterior f cov
+dL2 = -vec(ff_q/sigma2);
 
 L = log_yy_ff+log_ff;
 L = -L;
