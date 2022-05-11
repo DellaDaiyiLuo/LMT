@@ -35,8 +35,7 @@ switch latentTYPE
             Kprior = BBw*BBw';
         end
     case 2, % SE
-%         Kprior = kAR1(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
-%         Kprior = kSE(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
+        Kprior = kSE(rhoxx,lenxx,tgrid,tgrid); % Latent covariance
         [BBw, nu, sdiag, iikeep] = BfromK(Kprior,1e-4);
         BBwfun = @(xx,invflag) BBwfun_SE(xx,BBw,invflag);
         BBwTfun = @(xx,invflag) BBwTfun_SE(xx,BBw,invflag);
