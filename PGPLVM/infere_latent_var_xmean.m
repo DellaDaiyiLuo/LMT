@@ -1,4 +1,4 @@
-function result = infere_latent_var(yy,nf,setopt,xx,fftc,xgrid)
+function result = infere_latent_var_xmean(yy,nf,setopt,xx,fftc,xgrid)
 % Della
 % Initialize the log of spike rates with the square root of spike counts.
 ffmat = setopt.ffmat;%sqrt(yy);
@@ -17,6 +17,8 @@ xplds = setopt.xplds;
 
 % generate grid values as inducing points
 tgrid = setopt.tgrid;
+d = [0,find(diff(tgrid')>1)]+1; %DL
+xmean = zeros(size(xplds));
 
 % set hypers
 hypers = [setopt.rhoxx, setopt.lenxx, setopt.rhoff, setopt.lenff]; % rho for Kxx; len for Kxx; rho for Kff; len for Kff
@@ -40,14 +42,15 @@ lenff = hypers(4); % length scale of the covariance function for the tuning curv
 initTYPE = setopt.initTYPE;
 switch initTYPE
     case 1  % use LLE or PPCA or PLDS init
-        uu0 = Bfun(xplds,1);
+        xmean=interp1([d,nt+1],[xplds(d,:);0,0],1:nt,'previous');
+        uu0 = Bfun(xplds-xmean,1);
     case 2   % use random init
         uu0 = randn(nu,nf)*0.01;
     case 3   % true xx
         uu0 = Bfun(xx,1);
 end
 uu = uu0;  % initialize sample
-xxsamp = Bfun(uu,0);
+xxsamp = Bfun(uu,0)+xmean;
 if nf==1
     xxsampmat = align_xtrue(xxsamp,xx);
     xxsampmat_old = xxsampmat;
@@ -119,7 +122,8 @@ for iter = 1:niter
     
     %% 2. Find optimal latent xx, actually search in u space, xx=K^{1/2}*u
     [Bfun, BTfun, nu] = prior_kernel(rhoxx,lenxx,nt,latentTYPE,tgrid); % DL: using Cholesky decomposition to compute K^{1/2} and K^{1/2}.T, getting uu~N(0,1)
-    uu = Bfun(xxsamp,1);
+    xmean = interp1([d,nt+1],[xxsamp(d,:);0,0],1:nt,'previous');
+    uu = Bfun(xxsamp-xmean,1);
     cufx_old = covfun(xgrid,xxsamp);
     invcc_old = pdinv(cufx_old*cufx_old'+sigma2*cuu);
     
@@ -138,7 +142,7 @@ for iter = 1:niter
                 case 3
                     % decouple la
 %                     lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old);
-                    lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple_tc(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old,fftc,[0,0]);
+                    lmlifun = @(u) logmargli_gplvm_se_sor_la_decouple_tc(u,yy,Bfun,ffmat,covfun,sigma2,nf,BTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old,fftc,xmean);
             end
     end
     
@@ -181,7 +185,7 @@ for iter = 1:niter
             uunew = uunew(:,end);
     end
     uu = reshape(uunew,[],nf);
-    xxsamp = Bfun(uu,0);
+    xxsamp = Bfun(uu,0)+xmean;
     
     % plot latent xx
 %     figure(1)

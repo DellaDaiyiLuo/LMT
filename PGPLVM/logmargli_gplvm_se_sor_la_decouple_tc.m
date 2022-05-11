@@ -1,7 +1,7 @@
-function [L,dL] = logmargli_gplvm_se_sor_la_decouple_tc(uu,yy,BBwfun,ff,covfun,sigma2,nf,BBwTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old,fftc)
+function [L,dL] = logmargli_gplvm_se_sor_la_decouple_tc(uu,yy,BBwfun,ff,covfun,sigma2,nf,BBwTfun,xgrid,cuu,cuuinv,cufx_old,invcc_old,fftc,xmean)
 [nt,nneur] = size(ff);
 uu = reshape(uu,[],nf);
-xx = BBwfun(uu,0);
+xx = BBwfun(uu,0)+xmean; %DL
 
 %%%%%%% cov %%%%%%%%
 [cufx,dcufx] = covfun(xgrid,xx); % dcufx = d(cufx)/dx
