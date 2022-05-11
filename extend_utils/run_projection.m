@@ -1,4 +1,4 @@
-function [result, setopt, fftc, pathlen, knndis, knnportion,xx,order] = run_projection(xx0,yy0,tgrid,result_la,niter,varargin)
+function [result, setopt, fftc, stepdis, knndis, knnportion,xx,order] = run_projection(xx0,yy0,tgrid,result_la,niter,varargin)
 % scaler: run_data * scaler = pbe_data, matrix of size (#neurons,1)
 % tctype: tuning curve type, 'run' or 'pbe'
 % newdatatype: new data type, 'run' or 'pbe'
@@ -11,6 +11,9 @@ addParameter(p,'scaler',[])
 addParameter(p,'sigma',2*power(0.95,30))
 addParameter(p,'draw',1)
 addParameter(p,'shuffle','no')
+addParameter(p,'k',10)
+addParameter(p,'xbackground',[])
+addParameter(p,'segmeasure',0) % get measures of every segment
 parse(p,varargin{:});
 
 scaler = p.Results.scaler;
@@ -116,7 +119,16 @@ setopt.niter = niter; % number of iterations
 % Compute P-GPLVM with Laplace Approximation
 setopt.ffmat = log(yy+1e-3);
 setopt.draw = p.Results.draw;
+% result = infere_latent_var_xmean(yy,nf,setopt,xx,fftc,result_la.xxsamp); 
 result = infere_latent_var(yy,nf,setopt,xx,fftc,result_la.xxsamp); 
-d = find(diff(tgrid')>1);
-[pathlen, knndis, knnportion] = projected_xx_measures(result.xxsamp,{result_la.xxsamp},d,p.Results.draw);
+d = int16([0,find(diff(tgrid')>1),numel(tgrid)]);
+if p.Results.segmeasure
+        [stepdis, knndis, knnportion] = projected_xx_measures_segs(result.xxsamp,p.Results.xbackground,d,p.Results.draw,p.Results.k);
+else
+    if isempty(p.Results.xbackground)
+        [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,{result_la.xxsamp},d,p.Results.draw,p.Results.k);
+    else
+        [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,p.Results.xbackground,d,p.Results.draw,p.Results.k);
+    end
+end
 end

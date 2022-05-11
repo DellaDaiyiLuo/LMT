@@ -1,5 +1,5 @@
 
-initpaths;
+addpath(genpath('/home/kemerelab/Downloads/EEG/LMT-master'));warning off
 addpath(genpath('/home/kemerelab/Downloads/EEG/utils'));
 
 %% Load data
@@ -42,7 +42,7 @@ tgrid = portion';%double(idx(portion))';%[1:numel(portion)]'; %
 
 [result_la,setopt]=run_pgplvm(xx,yy,tgrid,nf,niter,[]);
 figure
-show_latent_variable(result_la.xxsamp,xx,[],tgrid,[],1)
+show_latent_variable(result_la.xxsamp,xx,[],setopt.tgrid,'line_only',1)
 
 % additional run if not satisfied
 niter=20;
@@ -73,18 +73,20 @@ axis([0,200,0,43])
 xplot = result_la.xxsamp;
 nt=size(xx,1);
 ii=1:nt;
-direct=zeros(nt,1);direct(diff(xx)<0)=1;
-direct(end) = direct(end-1);
+direct=zeros(nt-1,1);direct(diff(xx)<0)=1;
+direct = [direct(1);direct];
+direct_sm = smoothdata(direct,'movmedian',5);
+direct = round(direct_sm);
 
     % show directions in position
 figure;hold on;
 scatter(ii(direct==1),xx(ii(direct==1)),3);
 scatter(ii(direct==0),xx(ii(direct==0)),3)
-
     % show directions in latent space
 figure;hold on;scatter(xplot(direct==1,1),xplot(direct==1,2),3)
 scatter(xplot(direct==0,1),xplot(direct==0,2),3)
 legend({'Forward','Backward'})
+axis([-83,63,-55,50])
 axis([-50,50,-55,55])
 
 % ---------- number of manifolds ---------- %
@@ -92,17 +94,39 @@ ratio = 0.002;
 xplot = result_la.xxsamp;%setopt.xplds;%
 
 [tbl_id, comp_id,k_log,n_debris_log] = find_components(xplot, ratio, 1);
+figure;plot(k_log,n_debris_log)
 
-
-figure;hold on
 n_comp = size(tbl_id,1);
-title_cell = cell(n_comp);
+xbackground = cell(n_comp,1);
 for i=1:n_comp
-    show_latent_variable(xplot,comp_id,[],[],comp_id==tbl_id(i,1),1)
-    title_cell(i) = ['comp' num2str(i)];
+    xbackground{i} = result_la.xxsamp(comp_id==tbl_id(i,1),:);
 end
+k = k_log(end);
+save('/home/kemerelab/Downloads/EEG/Elife2018_data/True_Shuffle_MIX/result_elife_mix_nf2_init_pca_xbackground.mat', 'xbackground', 'k')
 
-legend(title_cell)
+figure
+ax1 = axes;
+i=1;
+scatter(ax1,xbackground{i}(:,1),xbackground{i}(:,2),3,xx(comp_id==tbl_id(i,1)))
+view(2)
+ax2 = axes;
+i=2;
+scatter(ax2,xbackground{i}(:,1),xbackground{i}(:,2),3,xx(comp_id==tbl_id(i,1)))
+%%Link them together
+linkaxes([ax1,ax2])
+%%Hide the top axes
+ax2.Visible = 'off';
+ax2.XTick = [];
+ax2.YTick = [];
+%%Give each one its own colormap
+colormap(ax1,'parula')
+colormap(ax2,'copper')
+axis([-83,63,-55,50])
+%%Then add colorbars and get everything lined up
+set([ax1,ax2],'Position',[.17 .11 .685 .815]);
+cb1 = colorbar(ax1,'Position',[.05 .11 0.036 .815]);
+cb2 = colorbar(ax2,'Position',[.88 .11 0.036 .815]);
+
 
 
 

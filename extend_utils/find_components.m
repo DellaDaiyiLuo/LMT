@@ -32,25 +32,25 @@ display(['Number of disconnected components: ' num2str(size(tbl_id,1))])
 
 if plot_graph==1
     figure;plot(H);
-    title({'k-nearest neighbor graph' ['k=' num2str(k) ', n\_comp=' num2str(size(tbl_id,1))]})
+    title({'k-nearest neighbor graph' ['k=' num2str(k-1) ', n\_comp=' num2str(size(tbl_id,1))]})
 end
 
-while size(tbl_id,1)>1
-    k_log = [k_log k];
-    display(['Number of neighbors to be searched: ' num2str(k)])
-    Idx = knnsearch(xplot,xplot,'K',k,'Distance','euclidean');
-
-    EdgeTable = zeros(size(Idx,1)*(k-1),2);
-    for i = 2:k
-        EdgeTable([size(Idx,1)*(i-2)+1:size(Idx,1)*(i-1)],:) = Idx(:,[1,i]);
-    end
-
-    H = simplify(graph(EdgeTable(:,1)',EdgeTable(:,2)'));
-    comp_id = conncomp(H);
-    tbl_id = tabulate(comp_id);
-    n_debris = numel(find(tbl_id(:,2)<20)); % Any connected component should have more than 20 points
-    n_debris_log = [n_debris_log n_debris];
-    display(['number of debirs components: ' num2str(n_debris)])
-    k = k+1;
-end
+% while size(tbl_id,1)>1
+%     k_log = [k_log k];
+%     display(['Number of neighbors to be searched: ' num2str(k)])
+%     Idx = knnsearch(xplot,xplot,'K',k,'Distance','euclidean');
+% 
+%     EdgeTable = zeros(size(Idx,1)*(k-1),2);
+%     for i = 2:k
+%         EdgeTable([size(Idx,1)*(i-2)+1:size(Idx,1)*(i-1)],:) = Idx(:,[1,i]);
+%     end
+% 
+%     H = simplify(graph(EdgeTable(:,1)',EdgeTable(:,2)'));
+%     comp_id = conncomp(H);
+%     tbl_id = tabulate(comp_id);
+%     n_debris = numel(find(tbl_id(:,2)<20)); % Any connected component should have more than 20 points
+%     n_debris_log = [n_debris_log n_debris];
+%     display(['number of debirs components: ' num2str(n_debris)])
+%     k = k+1;
+% end
 end
