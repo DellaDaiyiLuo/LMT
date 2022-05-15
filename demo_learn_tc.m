@@ -1,6 +1,5 @@
 
 addpath(genpath('/home/kemerelab/Downloads/EEG/LMT-master'));warning off
-addpath(genpath('/home/kemerelab/Downloads/EEG/utils'));
 
 %% Load data
 
