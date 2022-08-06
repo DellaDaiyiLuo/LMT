@@ -18,8 +18,8 @@ scatter(fwd,position(fwd))
 scatter(bwd,position(bwd))
 
 %-----------repeat for fwd and bwd -----------------%
-pos_dir = position(bwd);
-spk_dir = spikes(:,bwd);
+pos_dir = position(fwd);
+spk_dir = spikes(:,fwd);
 
 pp = round(pos_dir/2);
 tbl = tabulate(pp);
@@ -54,8 +54,9 @@ tbl_fwd = tbl_;
 tc_sm_bwd = tc_sm;
 tbl_bwd = tbl_;
 
-tc_sm = [tc_sm_fwd,tc_sm_bwd];
-tbl = [tbl_fwd;tbl_bwd];
+%------------------------%
+tc_sm = [tc_sm_bwd(:,end:-1:1),tc_sm_fwd];
+tbl = [-1*tbl_bwd(end:-1:1,:);tbl_fwd];
 
 load('track1_PBEs_4ms.mat')
 
@@ -74,3 +75,28 @@ xinit_ratio = tbl(xinitidx,1);
 
 figure
 plot(xinit_ratio,'.')
+xlim([4739,4793]);
+xlim([4296,4350]);
+%-------
+save('pbe_bayes_llh.mat','loglikelihood','tbl','tc_sc');
+matrix = exp(loglikelihood(4739:4793,:)');
+% matrix = exp(loglikelihood(4739:4793,:)'); 
+matrix_n = zeros(size(matrix));
+for i=1:size(matrix,2)
+    matrix_n(:,i) = matrix(:,i)/sum(matrix(:,i));
+%     matrix_n(:,i) = (matrix(:,i)-min(matrix(:,i)))/(max(matrix(:,i))-min(matrix(:,i)));
+end
+figure;image(1:size(matrix,2),tbl(:,1)*2,matrix_n,'CDataMapping','scaled')
+c = gray;
+c = flipud(c);
+colormap(c);
+set(gca,'YDir','normal')
+xlabel('time bin')
+ylabel('Inbound      Outbound')
+cb = colorbar;
+cb.Label.String='Probability';
+title('PBE example2')
+
+%----------
+tbl_idx = [size(tbl,1):-1:size(tbl_fwd,1)+1,1:size(tbl_fwd,1)];
+figure;plot(tbl(tbl_idx,1))

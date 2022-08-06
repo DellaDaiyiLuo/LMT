@@ -6,7 +6,7 @@ function [stepdis, knndis, knnportion] = projected_xx_measures(x_measure,x_knnba
 % will be removed from path length
 % plot_result: plot result or not
 
-disdiff = vecnorm(diff(x_measure),2,2);
+disdiff = vecnorm(diff(x_measure)',2);
 if numel(d)>2
     stepdis = (sum(disdiff)-sum(disdiff(d(2:end-1))))/(numel(disdiff)+2-numel(d)); % path length
 else

@@ -1,4 +1,5 @@
-function [result, setopt, fftc, stepdis, knndis, knnportion,xx,order] = run_projection(xx0,yy0,tgrid,result_la,niter,varargin)
+function [result, setopt, fftc, order, varargout] = run_projection(xx0,yy0,tgrid,result_la,niter,varargin)
+%[result, setopt, fftc, stepdis, knndis, knnportion,xx,order] = run_projection(xx0,yy0,tgrid,result_la,niter,varargin)
 % scaler: run_data * scaler = pbe_data, matrix of size (#neurons,1)
 % tctype: tuning curve type, 'run' or 'pbe'
 % newdatatype: new data type, 'run' or 'pbe'
@@ -14,11 +15,14 @@ addParameter(p,'shuffle','no')
 addParameter(p,'k',10)
 addParameter(p,'xbackground',[])
 addParameter(p,'segmeasure',0) % get measures of every segment
+addParameter(p,'givemeasure',0)
+addParameter(p,'tgrid_tc',[])
 parse(p,varargin{:});
 
 scaler = p.Results.scaler;
 
 [nt,nneur] = size(yy0);
+d = [0,find(diff(tgrid')>1),numel(tgrid)];
 setopt.shuffle=p.Results.shuffle;
 switch p.Results.shuffle
     case 'cell'
@@ -33,6 +37,14 @@ switch p.Results.shuffle
         yy=yy0;
         xx=xx0;
         order=[];
+    case 'segtime'
+        order = 1:nt;
+        for i=1:numel(d)-1
+            ii = order(d(i)+1:d(i+1));
+            order(d(i)+1:d(i+1))=ii(randperm(d(i+1)-d(i)));
+        end
+        yy = yy0(order,:);
+        xx = xx0(order);
 end
 
 nf = size(result_la.xxsamp,2); % number of latent variable dimensions
@@ -80,17 +92,10 @@ loglikelihood = -repmat(sum(exp(fftc_init),2)',nt,1) + yy*fftc_init';
 [~, xinitidx] = max(loglikelihood,[],2);
 xinit = xgrid_(xinitidx,:);
 
-clear xgrid_ fftc_init gridbound loglikelihood ng xinitidx
+clear gridbound loglikelihood ng xinitidx
+clear xgrid_ fftc_init
 
-%----use tc grid-----%
-% ng = 21;
-% gridbound = [];
-% for i=1:nf
-%     gridbound = [gridbound; min(result_la0.xxsamp(:,i)) max(result_la0.xxsamp(:,i))];
-% end
-% xgrid = gen_grid(gridbound,ng,nf);
-% fftc = get_tc(result_la0.xxsamp,result_la0.ffmat,xgrid,result_la0.rhoff,result_la0.lenff);
-%--------------------%
+
 % run inference
 setopt.xpldsmat = []; %xppcamat;%[xx xx]; %  for plotting purpose
 setopt.initTYPE = 1; % initialize latent: 1. use PLDS init; 2. use random init; 3. true xx
@@ -119,16 +124,31 @@ setopt.niter = niter; % number of iterations
 % Compute P-GPLVM with Laplace Approximation
 setopt.ffmat = log(yy+1e-3);
 setopt.draw = p.Results.draw;
-% result = infere_latent_var_xmean(yy,nf,setopt,xx,fftc,result_la.xxsamp); 
+
+% %----use tc grid-----%
+% ng = 21;
+% gridbound = [];
+% for i=1:nf
+%     gridbound = [gridbound; min(result_la.xxsamp(:,i)) max(result_la.xxsamp(:,i))];
+% end
+% xgrid = gen_grid(gridbound,ng,nf);
+% fftc_ = get_tc(result_la.xxsamp,fftc,xgrid,result_la.rhoff,result_la.lenff);
+% result = infere_latent_var(yy,nf,setopt,xx,fftc_,xgrid);
+% %--------------------% 
+
 result = infere_latent_var(yy,nf,setopt,xx,fftc,result_la.xxsamp); 
-d = int16([0,find(diff(tgrid')>1),numel(tgrid)]);
-if p.Results.segmeasure
-        [stepdis, knndis, knnportion] = projected_xx_measures_segs(result.xxsamp,p.Results.xbackground,d,p.Results.draw,p.Results.k);
-else
-    if isempty(p.Results.xbackground)
-        [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,{result_la.xxsamp},d,p.Results.draw,p.Results.k);
+
+if p.Results.givemeasure
+    if p.Results.segmeasure
+            [speed_tc, ~] = get_speed(p.Results.tgrid_tc,result_la.xxsamp,0);
+            [stepdis, knndis, knnportion,spdcong,dircong] = projected_xx_measures_segs(result.xxsamp,p.Results.xbackground,d,tgrid,speed_tc,p.Results.draw,p.Results.k);
     else
-        [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,p.Results.xbackground,d,p.Results.draw,p.Results.k);
+        if isempty(p.Results.xbackground)
+            [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,{result_la.xxsamp},d,p.Results.draw,p.Results.k);
+        else
+            [stepdis, knndis, knnportion] = projected_xx_measures(result.xxsamp,p.Results.xbackground,d,p.Results.draw,p.Results.k);
+        end
     end
+    varargout={stepdis, knndis, knnportion,spdcong,dircong};
 end
 end

@@ -12,7 +12,7 @@ if plot_quiver
         case 2
             figure;quiver(xplot(:,1),xplot(:,2),speed(:,1),speed(:,2))
         case 3
-            figure;quiver3(xplot(:,1),xplot(:,2),xplot(:,3),speed(:,1),speed(:,2),speed(:,3))
+            quiver3(xplot(:,1),xplot(:,2),xplot(:,3),speed(:,1),speed(:,2),speed(:,3),3)
     end
 end
 end

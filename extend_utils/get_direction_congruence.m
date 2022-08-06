@@ -1,4 +1,4 @@
-function [congruence_ori,segcong_ori,m_sc_sm,ci_sc_sm,color] = get_direction_congruence(x_measure,x_knnbase,k,speed_measure,speed_tc,d)
+function [idx_cong1,idx_cong2,congruence_ori,segcong_ori,m_sc_sm,ci_sc_sm,color] = get_direction_congruence(x_measure,x_knnbase,k,speed_measure,speed_tc,d)
 % speed_measure = speed_measure./vecnorm(speed_measure,2,2);
 % speed_tc = speed_tc./vecnorm(speed_tc,2,2);
 
@@ -65,6 +65,7 @@ for i=1:l
     m_sc(i) = mean(B);
 end
 if numel(length)<2
+    idx_cong1=[];idx_cong2=[];
     figure;hold on;
     h=histogram(segcong_shf_lst,30,'Normalization','probability','FaceColor',[0.5,0.5,.5],'EdgeColor','None');
     if segcong_ori>ci_sc(1)
@@ -122,7 +123,7 @@ else
         end
     end
 
-    legend([p1,p2,p3],{'same direction','reverse direction','insignificant'})
+%     legend([p1,p2,p3],{'same direction','reverse direction','insignificant'})
 
     % %% shuffled
     % segcong_lst = [];

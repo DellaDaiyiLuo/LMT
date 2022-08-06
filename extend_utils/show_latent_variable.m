@@ -73,7 +73,7 @@ switch nf
                     plot3(xplot(d(i)+1:d(i+1),1),xplot(d(i)+1:d(i+1),2),xplot(d(i)+1:d(i+1),3),'Color',color)
                 end
             end
-            if ~input.Results.scatter_only
+            if ~input.Results.line_only
                 scatter3(xplot(part,1),xplot(part,2),xplot(part,3),3,xcolor(part))
             end
         end
