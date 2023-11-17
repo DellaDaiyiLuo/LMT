@@ -1,5 +1,4 @@
 function measures_hist_multiple(id,cellknndis_lst,timeknndis_lst,knndis_ori,name)
-figure;
 hold on;
 limit = [floor(min([cellknndis_lst{1}(:,id);timeknndis_lst{1}(:,id)])),ceil(max([cellknndis_lst{1}(:,id);timeknndis_lst{1}(:,id)]))];
 histogram(cellknndis_lst{1}(:,id),25,'Normalization','probability','BinLimits',limit,'DisplayStyle','stairs','EdgeColor',[.1,.4,.6])

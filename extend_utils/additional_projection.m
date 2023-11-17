@@ -4,5 +4,5 @@ nf = size(result_old.xxsamp,2);
 setopt.xplds=result_old.xxsamp;
 setopt.ffmat = result_old.ffmat;
 setopt.niter = niter;
-result = infere_latent_var(yy,nf,setopt,xx,fftc,xxtc); 
+result = pgplvm_la_tc(yy,nf,setopt,xx,fftc,xxtc);
 end

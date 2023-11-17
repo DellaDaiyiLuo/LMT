@@ -1,0 +1,61 @@
+function projected_xx_estimation(x_measure,result_la,tgrid,k)
+load('result_elife_t1_1000_2000_nf2_init_pca.mat')
+load('4.2.1.5.mat')
+x_measure=result.xxsamp;
+x_knnbase={result_la.xxsamp};
+tgrid=setopt.tgrid;
+%% Measures for unsupervised learned result
+
+disdiff = vecnorm(diff(x_measure),2,2);
+pathlen = 0; % path length
+d = [0 find(diff(tgrid')>1) numel(tgrid)];
+for i=1:numel(d)-1
+    pathlen = pathlen + sum(disdiff(d(i)+1:d(i+1)-1));
+end
+
+
+n_manifold = numel(x_knnbase);
+
+knndis = zeros(n_manifold,1);
+knnportion = zeros(n_manifold,1);
+knn_in_tc = {};
+for m = 1:n_manifold
+    x_tc = x_knnbase{m};
+    k=floor(size(x_tc,1)*0.01);
+    display(['k=' num2str(k) ' when searching knn in manifold' num2str(m)]);
+    [Idx,D] = knnsearch(x_tc,x_measure,'K',k,'Distance','euclidean');
+    knndis(m) = mean(D,'all'); % knn distances to tc manifold
+    Idxtbl = tabulate(Idx(:));
+    knn_in_tc = [knn_in_tc, {Idxtbl(:,2)>0}];
+    knnportion(m) = sum(knn_in_tc{m})/size(x_tc,1); % knn distribution on tc
+end
+% figure;
+% scatter(result_la.xxsamp(:,1),result_la.xxsamp(:,2),3);
+% hold on;
+% for i=1:numel(d)-1
+%     plot(xplot(d(i)+1:d(i+1),1),xplot(d(i)+1:d(i+1),2),'Color',[0.7,0.2,0.2]) %
+% end
+% scatter(tc(Idxtbl(:,2)>0,1),tc(Idxtbl(:,2)>0,2),3,'*');
+% title({'cell shuffle 1' ['portion of knn in tc manifold1: ' num2str(knnportion)]})
+% 
+% pathlen, knndis, knnportion
+
+
+if plot_result
+    figure;hold on
+    p = [];
+    labels = {};
+    for m=1:n_manifold
+        p1=scatter(x_knnbase{m}(:,1),x_knnbase{m}(:,2),7,'MarkerFaceColor',[.8,.8,.8]*m/n_manifold,'MarkerEdgeColor','None');
+        p = [p,p1]; 
+        labels = [labels,{['TC manifold', num2str(m)]}];
+        p2=scatter(x_knnbase{m}(knn_in_tc{m},1),x_knnbase{m}(knn_in_tc{m},2),10,'*');
+        p = [p,p2]; 
+        labels = [labels,{['knn on manifold', num2str(m)]}];
+    end
+    for i=1:numel(d)-1
+        p3=plot(x_measure(d(i)+1:d(i+1),1),x_measure(d(i)+1:d(i+1),2),'Color',[0.7,0.5,0.5]); %
+    end
+    legend([p,p3],[labels,{'projected data'}])
+end
+end

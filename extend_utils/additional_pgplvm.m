@@ -8,5 +8,5 @@ setopt.sigma2_init=result_la_old.sigma;
 setopt.xplds=result_la_old.xxsamp;
 setopt.ffmat=result_la_old.ffmat;
 setopt.niter = niter;
-result_la = pgplvm_la(yy,nf,setopt,xx);
+result_la = pgplvm_la_hyp_cell(yy,nf,setopt,xx);
 end
